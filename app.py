@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import re
 import numpy as np
 import openai
+import json
 
 st.set_page_config(page_title="Analyse LeBonCoin", layout="centered")
 st.title("🔍 Analyse intelligente d'une annonce LeBonCoin")
@@ -53,15 +54,14 @@ if url:
         r = requests.get(url, headers=headers)
         soup = BeautifulSoup(r.content, 'html.parser')
 
-        # === INFOS ANNONCE ===
-        title = soup.find('h1') or soup.find('meta', property='og:title')
-        price = soup.find('span', string=re.compile("€")) or soup.find('meta', property='product:price:amount')
-        desc = soup.find('div', {'data-qa-id': 'adview_description_container'}) or soup.find('meta', {'name': 'description'})
-        images = soup.find_all('img')
+        script_json = soup.find("script", type="application/ld+json")
+        data = json.loads(script_json.string) if script_json else {}
 
-        title_text = title.text.strip() if title and hasattr(title, 'text') else title['content'].strip() if title and title.has_attr('content') else "(titre non trouvé)"
-        price_text = price.text.strip() if price and hasattr(price, 'text') else price['content'].strip() + " €" if price and price.has_attr('content') else "(prix non trouvé)"
-        desc_text = desc.text.strip() if desc and hasattr(desc, 'text') else desc['content'].strip() if desc and desc.has_attr('content') else "(description non trouvée)"
+        title_text = data.get("name") or "(titre non trouvé)"
+        price_text = str(data.get("offers", {}).get("price", "(prix non trouvé)")) + " €" if data.get("offers") else "(prix non trouvé)"
+        desc_text = data.get("description") or "(description non trouvée)"
+        image_list = data.get("image", [])
+        images = image_list if isinstance(image_list, list) else [image_list]
 
         st.subheader("📄 Informations extraites")
         st.markdown(f"**Titre :** {title_text}")
@@ -69,9 +69,6 @@ if url:
         st.markdown(f"**Description :** {desc_text[:300]}...")
         st.markdown(f"**Nombre d'images :** {len(images)}")
 
-        # Le reste du code reste inchangé pour profil vendeur, analyse, IA, etc.
-
     except Exception as e:
         st.error("Erreur lors de l'analyse de l'annonce :")
         st.text(str(e))
-
