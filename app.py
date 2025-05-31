@@ -67,8 +67,9 @@ if url:
             scripts = soup.find_all("script")
             preloaded_json = None
             for script in scripts:
-                if script.string and "window.__PRELOADED_STATE__ = " in script.string:
-                    json_raw = script.string.split("window.__PRELOADED_STATE__ = ", 1)[1].strip()
+                content = script.string or "".join(script.contents)
+                if "window.__PRELOADED_STATE__ = " in content:
+                    json_raw = content.split("window.__PRELOADED_STATE__ = ", 1)[1].strip()
                     if json_raw.endswith(";"):
                         json_raw = json_raw[:-1]
                     preloaded_json = json.loads(json_raw)
